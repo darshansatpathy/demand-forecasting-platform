@@ -1,0 +1,90 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "demand-forecasting-platform"
+version = "0.1.0"
+description = "Hierarchical weekly demand forecasting: a global LightGBM model, MinT reconciliation, rolling-origin backtests against baselines, calibrated intervals, promotion uplift, an Airflow DAG, MLflow and plain-language questions."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "Darshan Kumar Satpathy" }]
+keywords = ["demand-forecasting", "hierarchical-forecasting", "mint", "lightgbm", "airflow", "mlflow", "supply-chain", "retail"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "pyarrow>=15",
+  "lightgbm>=4.3",
+  "pydantic>=2.6",
+  "pyyaml>=6.0",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+]
+
+[project.optional-dependencies]
+mlflow = ["mlflow-skinny>=2.14", "sqlalchemy>=2.0", "alembic>=1.13"]
+dev = [
+  "demand-forecasting-platform[mlflow]",
+  "httpx>=0.27",
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "types-PyYAML>=6.0",
+  "pip-audit>=2.7",
+]
+
+[project.scripts]
+dfc = "demandcast.cli:main"
+
+[project.urls]
+Repository = "https://github.com/darshansatpathy/demand-forecasting-platform"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/demandcast"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"policy" = "demandcast/policy"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::FutureWarning"]
+
+[tool.coverage.run]
+source = ["demandcast"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "\\.\\.\\."]
+fail_under = 90
+
+[tool.ruff]
+line-length = 150
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = ["S101", "N803", "N806", "RUF001", "RUF002", "RUF003"]  # × is used on purpose in labels
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S108"]
+"src/demandcast/generate.py" = ["S311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["demandcast"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["lightgbm.*", "mlflow.*", "airflow.*", "pandas.*", "pyarrow.*"]
+ignore_missing_imports = true

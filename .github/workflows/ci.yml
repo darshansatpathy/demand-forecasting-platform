@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, types, tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - name: Tests with coverage, including planted failures of the forecast policy
+        run: pytest --cov --cov-report=term-missing --cov-fail-under=90
+
+  forecast-policy:
+    name: Backtest, policy gate and report
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: dfc run --out output --tracking-uri sqlite:///output/mlflow.db --report backtest-report.md --check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forecast
+          path: |
+            backtest-report.md
+            output/backtest.json
+            output/forecast/
+
+  airflow:
+    name: DAG runs end to end on Airflow 3.4
+    runs-on: ubuntu-24.04
+    env:
+      AIRFLOW_HOME: /tmp/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace }}/dags
+      DFC_WORKDIR: /tmp/demand-forecast
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install Airflow with its constraints, then the package
+        run: |
+          pip install "apache-airflow==3.4.0" --constraint https://raw.githubusercontent.com/apache/airflow/constraints-3.4.0/constraints-3.12.txt
+          pip install -e . pytest
+      - run: airflow db migrate
+      - name: The DAG parses with the expected tasks
+        run: pytest -p no:cacheprovider tests/test_dag.py
+      - name: Run backtest, gate and publish as Airflow tasks
+        run: |
+          airflow dags test demand_forecast 2026-01-05
+          test -f "$DFC_WORKDIR/forecast/forecast.parquet"
+
+  package:
+    name: Wheel builds and runs outside the repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install build && python -m build
+      - name: Install the wheel in a clean environment and ask a question of a fresh forecast
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install dist/*.whl
+          cd /tmp && /tmp/venv/bin/dfc run --out /tmp/out --check
+          /tmp/venv/bin/dfc ask "top 3 stores by forecast" --forecast /tmp/out/forecast
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[mlflow]" pip-audit
+      - run: pip-audit --skip-editable

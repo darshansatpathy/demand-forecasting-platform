@@ -1,0 +1,19 @@
+# What a forecast must show in backtesting before it is published. Checked by `dfc backtest --check`.
+
+backtest:
+  validation_origins: [67, 75, 83, 91, 99, 107, 115]  # residuals for reconciliation and interval calibration
+  test_origins: [123, 131, 139, 147]   # the last 32 weeks, four 8-week windows, never used for fitting
+  interval: 0.80
+
+thresholds:
+  # Weighted absolute percentage error must improve on seasonal naive by at least this much.
+  min_improvement_vs_seasonal_naive:
+    store: 0.15
+    store_sku: 0.15
+  # ...and must not be worse than an 8-week moving average at any level.
+  no_worse_than_moving_average: true
+  max_abs_bias: {total: 0.05, region: 0.05}
+  # Gated where there are enough test observations to measure coverage (store: 384, and more
+  # below it); total (32) and region (96) are reported, not gated.
+  interval_coverage: {min: 0.75, max: 0.88, levels: [store, store_category, store_sku]}
+  max_incoherence: 1.0e-6

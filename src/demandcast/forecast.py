@@ -99,7 +99,7 @@ def design(data: Data, origin: int, with_target: bool = True) -> tuple[pd.DataFr
     age = np.clip(origin - first, 0, 104).astype(float)
 
     def mean_last(k: int) -> np.ndarray:
-        return hist[:, max(0, origin - k + 1) :].mean(axis=1)
+        return np.asarray(hist[:, max(0, origin - k + 1) :].mean(axis=1), dtype=float)
 
     blocks, targets, scales = [], [], []
     week_of_year = data.weeks.isocalendar().week.to_numpy().astype(float)

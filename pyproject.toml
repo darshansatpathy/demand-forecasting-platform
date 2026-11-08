@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "demand-forecasting-platform"
-version = "0.1.0"
+version = "0.1.1"
 description = "Hierarchical weekly demand forecasting: a global LightGBM model, MinT reconciliation, rolling-origin backtests against baselines, calibrated intervals, promotion uplift, an Airflow DAG, MLflow and plain-language questions."
 readme = "README.md"
 license = { text = "MIT" }

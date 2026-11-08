@@ -16,7 +16,7 @@ class Question(BaseModel):
 
 def create_app(forecast_dir: Path) -> FastAPI:
     published = Published.load(forecast_dir)
-    app = FastAPI(title="Demand forecast", version="0.1.0")
+    app = FastAPI(title="Demand forecast", version="0.1.1")
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

@@ -4,6 +4,12 @@ All notable changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-08
+
+### Fixed
+
+- The forecast feature helper returns a float array explicitly, so mypy passes with the NumPy stubs installed on Python 3.11.
+
 ## [0.1.0] - 2026-11-08
 
 ### Added
